@@ -1,0 +1,16 @@
+name: docker
+summary: Docker container runtime subordinate
+maintainer: Joe Borg <joseph.borg@canonical.com>
+description: |
+  A Juju subordinate charm that can be attached to charm 
+  that need a container runtime.
+tags:
+  - containers
+subordinate: true
+series:
+  - xenial
+  - bionic
+requires:
+  docker:
+    interface: container
+    scope: container
