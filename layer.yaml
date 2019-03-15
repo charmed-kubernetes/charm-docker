@@ -1,4 +1,4 @@
 repo: https://github.com/juju-solutions/charm-docker
-includes: 
+includes:
   - 'layer:basic'
-  - 'interface:container'
+  - 'interface:container-runtime'
