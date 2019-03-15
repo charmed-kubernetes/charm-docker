@@ -23,9 +23,11 @@ from charmhelpers.contrib.charmsupport import nrpe
 from charms.reactive import hook
 from charms.reactive import remove_state
 from charms.reactive import set_state
+from charms.reactive import is_state
 from charms.reactive import when
 from charms.reactive import when_any
 from charms.reactive import when_not
+from charms.reactive import endpoint_from_flag
 from charms.reactive.helpers import data_changed
 
 from charms.docker import Docker
@@ -111,6 +113,17 @@ def determine_apt_source():
     hookenv.log(
         'Setting runtime to {}'.format(docker_packages))
     return docker_runtime
+
+
+@when('docker.ready')
+@when('endpoint.docker.joined')
+def publish_config():
+    endpoint = endpoint_from_flag('endpoint.docker.joined')
+    endpoint.set_config(
+        socket=Docker().socket,
+        runtime='docker',
+        nvidia_enabled=is_state('nvidia-docker.supported')
+    )
 
 
 @when_not('docker.ready')
