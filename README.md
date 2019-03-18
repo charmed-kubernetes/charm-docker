@@ -16,7 +16,7 @@ QA, and production environments.
 
 The following states are set by this subordinate:
 
-* `docker.available`
+* `endpoint.{relation name}.available`
 
   This state is set when docker is available for use.
 
