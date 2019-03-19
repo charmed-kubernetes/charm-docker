@@ -194,6 +194,22 @@ def install():
     check_call(['usermod', '-aG', 'docker', 'ubuntu'])
 
 
+@when('endpoint.docker.departed')
+def remove():
+    """
+    Remove the docker daemon after
+    relation departs.
+
+    :return: None
+    """
+    host.service_stop('docker')
+    for k in docker_packages.keys():
+        package_list = " ".join(docker_packages[k])
+        hookenv.log('Removing package(s): {}.'.format(package_list))
+        apt_unhold(docker_packages[k])
+        apt_purge(docker_packages[k])
+
+
 @when('config.changed.install_from_upstream', 'docker.ready')
 def toggle_install_from_upstream():
     """
@@ -254,14 +270,10 @@ def toggle_docker_daemon_source():
     # so we need to uninstall either of the others that are installed
     # and reset the state to force a reinstall.
     if runtime not in installed:
-        host.service_stop('docker')
-        for k in docker_packages.keys():
-            package_list = " ".join(docker_packages[k])
-            hookenv.log('Removing package(s): {}.'.format(package_list))
-            apt_unhold(docker_packages[k])
-            apt_purge(docker_packages[k])
-            remove_state('docker.ready')
-            remove_state('docker.available')
+        remove()
+        remove_state('docker.ready')
+        remove_state('docker.available')
+
     else:
         hookenv.log('Not touching packages.')
 
