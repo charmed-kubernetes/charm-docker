@@ -12,6 +12,7 @@ from charmhelpers.core import hookenv
 from charmhelpers.core.hookenv import status_set
 from charmhelpers.core.hookenv import config
 from charmhelpers.core.templating import render
+from charmhelpers.core.host import arch
 from charmhelpers.fetch import apt_install
 from charmhelpers.fetch import apt_purge
 from charmhelpers.fetch import apt_update
@@ -315,9 +316,6 @@ def install_from_upstream_apt():
     # The url to the server that contains the docker apt packages.
     apt_url = 'https://download.docker.com/linux/ubuntu'
 
-    # Get the package architecture (amd64), not the machine hardware (x86_64)
-    architecture = arch()
-
     # Get the lsb information as a dictionary.
     lsb = host.lsb_release()
 
@@ -331,7 +329,7 @@ def install_from_upstream_apt():
     # deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable
     debs = list()
     debs.append('deb [arch={}] {} {} {}'.format(
-        architecture,
+        arch(),
         apt_url,
         code,
         repo
@@ -362,9 +360,6 @@ def install_from_nvidia_apt():
     # not try to get it through its fingerprint.
     add_apt_key_url('https://nvidia.github.io/nvidia-container-runtime/gpgkey')
 
-    # Get the package architecture (amd64), not the machine hardware (x86_64)
-    architecture = arch()
-
     # Get the lsb information as a dictionary.
     lsb = host.lsb_release()
     code = lsb['DISTRIB_CODENAME']
@@ -376,7 +371,7 @@ def install_from_nvidia_apt():
 
     debs = list()
     debs.append('deb [arch={}] {} {} {}'.format(
-        architecture,
+        arch(),
         docker_url,
         code,
         repo
@@ -393,12 +388,12 @@ def install_from_nvidia_apt():
             nvidia_url,
             package,
             release,
-            architecture
+            arch()
         ))
 
     write_docker_sources(debs)
 
-    install_cuda_drivers_repo(architecture, release, ubuntu)
+    install_cuda_drivers_repo(arch(), release, ubuntu)
 
     apt_update(fatal=True)
 
@@ -748,6 +743,34 @@ def remove_nrpe_config():
         nrpe_setup.remove_check(shortname=service)
 
 
+@when('config.changed.docker-logins')
+def docker_logins_changed():
+    """Login to a docker registry with configured credentials."""
+    config = hookenv.config()
+
+    previous_logins = config.previous('docker-logins')
+    logins = config['docker-logins']
+    logins = json.loads(logins)
+
+    if previous_logins:
+        previous_logins = json.loads(previous_logins)
+        next_servers = {login['server'] for login in logins}
+        previous_servers = {login['server'] for login in previous_logins}
+        servers_to_logout = previous_servers - next_servers
+        for server in servers_to_logout:
+            cmd = ['docker', 'logout', server]
+            check_call(cmd)
+
+    for login in logins:
+        server = login['server']
+        username = login['username']
+        password = login['password']
+        cmd = ['docker', 'login', server, '-u', username, '-p', password]
+        check_call(cmd)
+
+    remove_state('config.changed.docker-logins')
+
+
 class ConfigError(Exception):
     pass
 
@@ -851,19 +874,3 @@ def _remove_docker_network_bridge():
     # Render the config and restart docker.
     recycle_daemon()
 
-
-def arch():
-    """
-    Return the package architecture as a string.
-
-    :return: String
-    """
-    # Get the package architecture for this system.
-    if not arch.architecture:
-        arch.architecture = check_output(
-            ['dpkg', '--print-architecture']).rstrip()
-        arch.architecture = arch.architecture.decode('utf-8')
-    return arch.architecture
-
-
-arch.architecture = None  # noqa: E261, E305

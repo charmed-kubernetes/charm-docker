@@ -87,3 +87,12 @@ options:
         addresses) which should be accessed directly, rather than through
         the proxy defined in http_proxy or https_proxy. Must be less than
         2023 characters long.
+  docker-logins:
+    type: string
+    default: "[]"
+    description: |
+      Docker login credentials. Setting this config allows Kubelet to pull images from
+      registries where auth is required.
+
+      The value for this config must be a JSON array of credential objects, like this:
+        [{"server": "my.registry", "username": "myUser", "password": "myPass"}]
