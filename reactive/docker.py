@@ -211,6 +211,18 @@ def remove():
         apt_purge(docker_packages[k])
 
 
+@when('docker.ready')
+def fix_iptables_for_docker_1_13():
+    """
+    Fix iptables FORWARD policy for Docker >=1.13
+
+    https://github.com/kubernetes/kubernetes/issues/40182
+    https://github.com/kubernetes/kubernetes/issues/39823
+    """
+    cmd = ['iptables', '-w', '300', '-P', 'FORWARD', 'ACCEPT']
+    check_call(cmd)
+
+
 @when('config.changed.apt-key-server', 'docker.ready')
 def toggle_install_with_new_keyserver():
     """
