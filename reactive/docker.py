@@ -211,14 +211,6 @@ def remove():
         apt_purge(docker_packages[k])
 
 
-@when('config.changed.install_from_upstream', 'docker.ready')
-def toggle_install_from_upstream():
-    """
-    :return: None
-    """
-    toggle_docker_daemon_source()
-
-
 @when('config.changed.apt-key-server', 'docker.ready')
 def toggle_install_with_new_keyserver():
     """
