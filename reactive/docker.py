@@ -223,14 +223,6 @@ def fix_iptables_for_docker_1_13():
     check_call(cmd)
 
 
-@when('config.changed.install_from_upstream', 'docker.ready')
-def toggle_install_from_upstream():
-    """
-    :return: None
-    """
-    toggle_docker_daemon_source()
-
-
 @when('config.changed.apt-key-server', 'docker.ready')
 def toggle_install_with_new_keyserver():
     """
