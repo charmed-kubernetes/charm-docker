@@ -570,19 +570,6 @@ def add_apt_key(key):
 
 
 @when('docker.ready')
-@when_not('cgroups.modified')
-def enable_grub_cgroups():
-    """
-    :return: None
-    """
-    cfg = config()
-    if cfg.get('enable-cgroups'):
-        hookenv.log('Calling enable_grub_cgroups.sh and rebooting machine.')
-        check_call(['scripts/enable_grub_cgroups.sh'])
-        set_state('cgroups.modified')
-
-
-@when('docker.ready')
 @when_not('docker.available')
 def signal_workloads_start():
     """
