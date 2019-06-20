@@ -29,7 +29,7 @@ the Docker subordinate charm and then relate it to the
 principal charm.
 
 ```
-juju deploy docker-suborinate
+juju deploy cs:~containers/docker
 juju add-relation docker [principal charm]
 ```
 
