@@ -8,7 +8,7 @@ options:
     default : ""
     description: |
         Extra options to pass to the Docker daemon. e.g. --insecure-registry.
- docker_runtime:
+  docker_runtime:
     type: string
     default: "auto"
     description: |
