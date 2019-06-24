@@ -180,6 +180,14 @@ def install():
         hookenv.log('Unknown runtime {}'.format(runtime))
         return False
 
+    # If juju environment variables are defined, take precedent
+    # over config.yaml.
+    # See: https://github.com/dshcherb/charm-helpers/blob/eba3742de6a7023f22778ba58fbbb0ac212d2ea6/charmhelpers/core/hookenv.py#L1455
+    environment_config = hookenv.env_proxy_settings()
+    if environment_config is not None:
+        config.update(environment_config)
+
+
     validate_config()
     opts = DockerOpts()
     render(
@@ -997,4 +1005,3 @@ def _remove_docker_network_bridge():
 
     # Render the config and restart docker.
     recycle_daemon()
-
