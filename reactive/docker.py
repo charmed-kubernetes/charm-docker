@@ -180,13 +180,6 @@ def install():
         hookenv.log('Unknown runtime {}'.format(runtime))
         return False
 
-    # If juju environment variables are defined, take precedent
-    # over config.yaml.
-    # See: https://github.com/dshcherb/charm-helpers/blob/eba3742de6a7023f22778ba58fbbb0ac212d2ea6/charmhelpers/core/hookenv.py#L1455
-    environment_config = hookenv.env_proxy_settings()
-    if environment_config is not None:
-        config().update(environment_config)
-
     validate_config()
     opts = DockerOpts()
     render(
@@ -304,8 +297,10 @@ def toggle_docker_daemon_source():
         hookenv.log('Not touching packages.')
 
 
-@when_any('config.changed.http_proxy', 'config.changed.https_proxy',
-          'config.changed.no_proxy')
+# @when_any('config.changed.http_proxy', 'config.changed.https_proxy',
+#           'config.changed.no_proxy', 'config.changed.juju-http-proxy',
+#           'config.changed.juju-https-proxy', 'config.changed.juju-no-proxy')
+@when('config.changed')
 @when('docker.ready')
 def proxy_changed():
     """
@@ -926,6 +921,17 @@ def recycle_daemon():
 
     :return: None
     """
+
+    # If juju environment variables are defined, take precedent
+    # over config.yaml.
+    # See: https://github.com/dshcherb/charm-helpers/blob/eba3742de6a7023f22778ba58fbbb0ac212d2ea6/charmhelpers/core/hookenv.py#L1455
+    # &: https://bugs.launchpad.net/charm-layer-docker/+bug/1831712
+    environment_config = hookenv.env_proxy_settings()
+    if environment_config is not None:
+        config().update(environment_config)
+
+    hookenv.log("CONFIG: %s" % environment_config)
+
     validate_config()
     hookenv.log('Restarting docker service.')
 
@@ -977,7 +983,7 @@ def _probe_runtime_availability():
         command = ['docker', 'info']
         check_call(command)
         return True
-    except CalledProcessError:
+    except (CalledProcessError, FileNotFoundError):
         # Remove the availability state if we fail reachability.
         remove_state('docker.available')
         return False
