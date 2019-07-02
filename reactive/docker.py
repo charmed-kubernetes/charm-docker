@@ -40,7 +40,7 @@ from charms.docker import Docker
 from charms.docker import DockerOpts
 
 from charms import layer
-from charms.layer.kubernetes_common import (
+from charms.layer.container_runtime_common import (
     client_crt_path,
     client_key_path
 )
