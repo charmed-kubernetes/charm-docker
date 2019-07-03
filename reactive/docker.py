@@ -1,6 +1,8 @@
 import os
 import json
+import shutil
 import requests
+import subprocess
 from shlex import split
 from subprocess import check_call
 from subprocess import check_output
@@ -9,10 +11,12 @@ from subprocess import Popen, PIPE
 
 from charmhelpers.core import host
 from charmhelpers.core import hookenv
+from charmhelpers.core import unitdata
 from charmhelpers.core.hookenv import status_set
 from charmhelpers.core.hookenv import config
 from charmhelpers.core.templating import render
 from charmhelpers.core.host import arch
+from charmhelpers.core.host import install_ca_cert
 from charmhelpers.fetch import apt_install
 from charmhelpers.fetch import apt_purge
 from charmhelpers.fetch import apt_update
@@ -20,6 +24,7 @@ from charmhelpers.fetch import apt_hold
 from charmhelpers.fetch import apt_unhold
 from charmhelpers.fetch import filter_installed_packages
 from charmhelpers.contrib.charmsupport import nrpe
+
 
 from charms.reactive import hook
 from charms.reactive import remove_state
@@ -35,6 +40,13 @@ from charms.docker import Docker
 from charms.docker import DockerOpts
 
 from charms import layer
+from charms.layer.container_runtime_common import (
+    client_crt_path,
+    client_key_path
+)
+
+
+db = unitdata.kv()
 
 
 docker_packages = {
@@ -47,6 +59,10 @@ docker_packages = {
         'nvidia-container-runtime-hook'
     ]
 }
+
+
+class ConfigError(Exception):
+    pass
 
 
 def hold_all():
@@ -736,7 +752,11 @@ def remove_nrpe_config():
 
 @when('config.changed.docker-logins')
 def docker_logins_changed():
-    """Login to a docker registry with configured credentials."""
+    """
+    Login to a docker registry with configured credentials.
+
+    :return: None
+    """
     config = hookenv.config()
 
     previous_logins = config.previous('docker-logins')
@@ -762,8 +782,153 @@ def docker_logins_changed():
     remove_state('config.changed.docker-logins')
 
 
-class ConfigError(Exception):
-    pass
+@when('endpoint.docker-registry.ready')
+@when_not('docker.registry.configured')
+def configure_registry():
+    """
+    Add docker registry config when present.
+
+    :return: None
+    """
+    registry = endpoint_from_flag('endpoint.docker-registry.ready')
+    netloc = registry.registry_netloc
+
+    # handle tls data
+    cert_subdir = netloc
+    insecure_opt = {'insecure-registry': netloc}
+    if registry.has_tls():
+        # ensure the CA that signed our registry cert is trusted
+        install_ca_cert(registry.tls_ca, name='juju-docker-registry')
+        # remove potential insecure docker opts related to this registry
+        manage_docker_opts(insecure_opt, remove=True)
+        manage_registry_certs(cert_subdir, remove=False)
+    else:
+        manage_docker_opts(insecure_opt, remove=False)
+        manage_registry_certs(cert_subdir, remove=True)
+
+    # handle auth data
+    if registry.has_auth_basic():
+        hookenv.log('Logging into docker registry: {}.'.format(netloc))
+        cmd = ['docker', 'login', netloc,
+               '-u', registry.basic_user, '-p', registry.basic_password]
+        try:
+            check_output(cmd, stderr=subprocess.STDOUT)
+        except CalledProcessError as e:
+            if b'http response' in e.output.lower():
+                # non-tls login with basic auth will error like this:
+                #  Error response ... server gave HTTP response to HTTPS client
+                msg = 'docker login requires a TLS-enabled registry'
+            elif b'unauthorized' in e.output.lower():
+                # invalid creds will error like this:
+                #  Error response ... 401 Unauthorized
+                msg = 'Incorrect credentials for docker registry'
+            else:
+                msg = 'docker login failed, see juju debug-log'
+            hookenv.status_set('blocked', msg)
+    else:
+        hookenv.log('Disabling auth for docker registry: {}.'.format(netloc))
+        # NB: it's safe to logout of a registry that was never logged in
+        check_call(['docker', 'logout', netloc])
+
+    # NB: store our netloc so we can clean up if the registry goes away
+    db.set('registry_netloc', netloc)
+    set_state('docker.registry.configured')
+
+
+@when('endpoint.docker-registry.changed',
+      'docker.registry.configured')
+def reconfigure_registry():
+    """
+    Signal to update the registry config when something changes.
+
+    :return: None
+    """
+    remove_state('docker.registry.configured')
+
+
+@when('docker.registry.configured')
+@when_not('endpoint.docker-registry.joined')
+def remove_registry():
+    """
+    Remove registry config when the registry is no longer present.
+
+    :return: None
+    """
+    netloc = db.get('registry_netloc', None)
+
+    if netloc:
+        # remove tls-related data
+        cert_subdir = netloc
+        insecure_opt = {'insecure-registry': netloc}
+        manage_docker_opts(insecure_opt, remove=True)
+        manage_registry_certs(cert_subdir, remove=True)
+
+        # remove auth-related data
+        hookenv.log('Disabling auth for docker registry: {}.'.format(netloc))
+        # NB: it's safe to logout of a registry that was never logged in
+        check_call(['docker', 'logout', netloc])
+
+    remove_state('docker.registry.configured')
+
+
+def manage_docker_opts(opts, remove=False):
+    """
+    Add or remove docker daemon options.
+
+    Options here will be merged with configured docker-opts when layer-docker
+    processes a daemon restart.
+
+    :param opts: Dictionary keys/values; use None value if the key is a flag
+    :param remove: Boolean True to remove the options; False to add them
+    :return: None
+    """
+    try:
+        docker_opts = DockerOpts()
+    except Exception as e:
+        hookenv.log(e)
+        return
+
+    for k, v in opts.items():
+        # Always remove existing option
+        if docker_opts.exists(k):
+            docker_opts.pop(k)
+        if not remove:
+            docker_opts.add(k, v)
+    hookenv.log('DockerOpts daemon options changed. Requesting a restart.')
+    # State will be removed by layer-docker after restart
+    set_state('docker.restart')
+
+
+def manage_registry_certs(subdir, remove=False):
+    """
+    Add or remove TLS data for a specific registry.
+
+    When present, the docker client will use certificates when communicating
+    with a specific registry.
+
+    :param subdir: String subdirectory to store the client certificates
+    :param remove: Boolean True to remove cert data; False to add it
+    :return: None
+    """
+    cert_dir = '/etc/docker/certs.d/{}'.format(subdir)
+
+    if remove:
+        if os.path.isdir(cert_dir):
+            hookenv.log('Disabling registry TLS: {}.'.format(cert_dir))
+            shutil.rmtree(cert_dir)
+    else:
+        os.makedirs(cert_dir, exist_ok=True)
+        client_tls = {
+            client_crt_path: '{}/client.cert'.format(cert_dir),
+            client_key_path: '{}/client.key'.format(cert_dir),
+        }
+        for f, link in client_tls.items():
+            try:
+                os.remove(link)
+            except FileNotFoundError:
+                pass
+            hookenv.log('Creating registry TLS link: {}.'.format(link))
+            os.symlink(f, link)
 
 
 def validate_config():
