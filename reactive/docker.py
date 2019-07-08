@@ -40,13 +40,11 @@ from charms.docker import Docker
 from charms.docker import DockerOpts
 
 from charms import layer
-from charms.layer.container_runtime_common import (
-    client_crt_path,
-    client_key_path
-)
+from charms.layer.container_runtime_common import manage_registry_certs
 
 
-db = unitdata.kv()
+DB = unitdata.kv()
+CERTIFICATE_DIRECTORY = '/etc/docker/certs.d'
 
 
 docker_packages = {
@@ -795,16 +793,17 @@ def configure_registry():
 
     # handle tls data
     cert_subdir = netloc
+    cert_dir = os.path.join(CERTIFICATE_DIRECTORY, cert_subdir)
     insecure_opt = {'insecure-registry': netloc}
     if registry.has_tls():
         # ensure the CA that signed our registry cert is trusted
         install_ca_cert(registry.tls_ca, name='juju-docker-registry')
         # remove potential insecure docker opts related to this registry
         manage_docker_opts(insecure_opt, remove=True)
-        manage_registry_certs(cert_subdir, remove=False)
+        manage_registry_certs(cert_dir, remove=False)
     else:
         manage_docker_opts(insecure_opt, remove=False)
-        manage_registry_certs(cert_subdir, remove=True)
+        manage_registry_certs(cert_dir, remove=True)
 
     # handle auth data
     if registry.has_auth_basic():
@@ -831,7 +830,7 @@ def configure_registry():
         check_call(['docker', 'logout', netloc])
 
     # NB: store our netloc so we can clean up if the registry goes away
-    db.set('registry_netloc', netloc)
+    DB.set('registry_netloc', netloc)
     set_state('docker.registry.configured')
 
 
@@ -854,14 +853,15 @@ def remove_registry():
 
     :return: None
     """
-    netloc = db.get('registry_netloc', None)
+    netloc = DB.get('registry_netloc', None)
 
     if netloc:
         # remove tls-related data
         cert_subdir = netloc
+        cert_dir = os.path.join(CERTIFICATE_DIRECTORY, cert_subdir)
         insecure_opt = {'insecure-registry': netloc}
         manage_docker_opts(insecure_opt, remove=True)
-        manage_registry_certs(cert_subdir, remove=True)
+        manage_registry_certs(cert_dir, remove=True)
 
         # remove auth-related data
         hookenv.log('Disabling auth for docker registry: {}.'.format(netloc))
@@ -897,38 +897,6 @@ def manage_docker_opts(opts, remove=False):
     hookenv.log('DockerOpts daemon options changed. Requesting a restart.')
     # State will be removed by layer-docker after restart
     set_state('docker.restart')
-
-
-def manage_registry_certs(subdir, remove=False):
-    """
-    Add or remove TLS data for a specific registry.
-
-    When present, the docker client will use certificates when communicating
-    with a specific registry.
-
-    :param subdir: String subdirectory to store the client certificates
-    :param remove: Boolean True to remove cert data; False to add it
-    :return: None
-    """
-    cert_dir = '/etc/docker/certs.d/{}'.format(subdir)
-
-    if remove:
-        if os.path.isdir(cert_dir):
-            hookenv.log('Disabling registry TLS: {}.'.format(cert_dir))
-            shutil.rmtree(cert_dir)
-    else:
-        os.makedirs(cert_dir, exist_ok=True)
-        client_tls = {
-            client_crt_path: '{}/client.cert'.format(cert_dir),
-            client_key_path: '{}/client.key'.format(cert_dir),
-        }
-        for f, link in client_tls.items():
-            try:
-                os.remove(link)
-            except FileNotFoundError:
-                pass
-            hookenv.log('Creating registry TLS link: {}.'.format(link))
-            os.symlink(f, link)
 
 
 def validate_config():
