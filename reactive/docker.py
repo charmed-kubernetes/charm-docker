@@ -297,10 +297,8 @@ def toggle_docker_daemon_source():
         hookenv.log('Not touching packages.')
 
 
-# @when_any('config.changed.http_proxy', 'config.changed.https_proxy',
-#           'config.changed.no_proxy', 'config.changed.juju-http-proxy',
-#           'config.changed.juju-https-proxy', 'config.changed.juju-no-proxy')
-@when('config.changed')
+@when_any('config.changed.http_proxy', 'config.changed.https_proxy',
+          'config.changed.no_proxy')
 @when('docker.ready')
 def proxy_changed():
     """
@@ -983,7 +981,7 @@ def _probe_runtime_availability():
         command = ['docker', 'info']
         check_call(command)
         return True
-    except (CalledProcessError, FileNotFoundError):
+    except (CalledProcessError):
         # Remove the availability state if we fail reachability.
         remove_state('docker.available')
         return False
