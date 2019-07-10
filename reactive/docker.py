@@ -26,10 +26,12 @@ from charmhelpers.fetch import filter_installed_packages
 from charmhelpers.contrib.charmsupport import nrpe
 
 
+
 from charms.reactive import hook
 from charms.reactive import remove_state
 from charms.reactive import set_state
 from charms.reactive import is_state
+from charms.reactive.flags import is_flag_set
 from charms.reactive import when
 from charms.reactive import when_any
 from charms.reactive import when_not
@@ -925,8 +927,9 @@ def recycle_daemon():
     # See: https://github.com/dshcherb/charm-helpers/blob/eba3742de6a7023f22778ba58fbbb0ac212d2ea6/charmhelpers/core/hookenv.py#L1455
     # &: https://bugs.launchpad.net/charm-layer-docker/+bug/1831712
     environment_config = hookenv.env_proxy_settings()
+    configuration = config()
     if environment_config is not None:
-        config().update(environment_config)
+        configuration.update(environment_config)
 
     hookenv.log("CONFIG: %s" % environment_config)
 
