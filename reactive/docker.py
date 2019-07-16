@@ -42,7 +42,10 @@ from charms.docker import Docker
 from charms.docker import DockerOpts
 
 from charms import layer
-from charms.layer.container_runtime_common import manage_registry_certs
+from charms.layer.container_runtime_common import (
+    manage_registry_certs,
+    check_for_juju_https_proxy
+)
 
 
 DB = unitdata.kv()
@@ -922,16 +925,7 @@ def recycle_daemon():
     :return: None
     """
 
-    # If juju environment variables are defined, take precedent
-    # over config.yaml.
-    # See: https://github.com/dshcherb/charm-helpers/blob/eba3742de6a7023f22778ba58fbbb0ac212d2ea6/charmhelpers/core/hookenv.py#L1455
-    # &: https://bugs.launchpad.net/charm-layer-docker/+bug/1831712
-    environment_config = hookenv.env_proxy_settings()
-    configuration = config()
-    if environment_config is not None:
-        configuration.update(environment_config)
-
-    hookenv.log("CONFIG: %s" % environment_config)
+    modified_config = check_for_juju_https_proxy(config)
 
     validate_config()
     hookenv.log('Restarting docker service.')
@@ -949,7 +943,12 @@ def recycle_daemon():
             'docker_runtime': runtime
         }
     )
-    render('docker.systemd', '/lib/systemd/system/docker.service', config())
+    render(
+        'docker.systemd',
+        '/lib/systemd/system/docker.service',
+        modified_config
+    )
+
     reload_system_daemons()
     host.service_restart('docker')
 
