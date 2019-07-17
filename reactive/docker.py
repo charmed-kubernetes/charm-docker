@@ -904,7 +904,7 @@ def manage_docker_opts(opts, remove=False):
     set_state('docker.restart')
 
 
-def validate_config():
+def validate_config(config):
     """
     Check that config is valid.
 
@@ -913,7 +913,7 @@ def validate_config():
     max_line = 2048
     line_prefix_len = len('Environment="NO_PROXY=""')
     remain_len = max_line - line_prefix_len
-    if len(config('no_proxy')) > remain_len:
+    if len(config.get('no_proxy', '')) > remain_len:
         raise ConfigError('no_proxy longer than {} chars.'.format(remain_len))
 
 
@@ -927,7 +927,7 @@ def recycle_daemon():
 
     modified_config = check_for_juju_https_proxy(config)
 
-    validate_config()
+    validate_config(modified_config)
     hookenv.log('Restarting docker service.')
 
     # Re-render our docker daemon template at this time... because we're
