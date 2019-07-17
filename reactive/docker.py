@@ -185,7 +185,7 @@ def install():
         hookenv.log('Unknown runtime {}'.format(runtime))
         return False
 
-    validate_config()
+    validate_config(config())
     opts = DockerOpts()
     render(
         'docker.defaults',
