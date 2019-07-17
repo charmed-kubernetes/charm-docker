@@ -983,7 +983,7 @@ def _probe_runtime_availability():
         command = ['docker', 'info']
         check_call(command)
         return True
-    except (CalledProcessError):
+    except CalledProcessError:
         # Remove the availability state if we fail reachability.
         remove_state('docker.available')
         return False
