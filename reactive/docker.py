@@ -924,10 +924,9 @@ def recycle_daemon():
 
     :return: None
     """
+    charm_config = check_for_juju_https_proxy(config)
 
-    modified_config = check_for_juju_https_proxy(config)
-
-    validate_config(modified_config)
+    validate_config(charm_config)
     hookenv.log('Restarting docker service.')
 
     # Re-render our docker daemon template at this time... because we're
@@ -946,7 +945,7 @@ def recycle_daemon():
     render(
         'docker.systemd',
         '/lib/systemd/system/docker.service',
-        modified_config
+        charm_config
     )
 
     reload_system_daemons()
