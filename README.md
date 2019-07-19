@@ -40,7 +40,7 @@ principal charm.
 
 # Configuration
 
-See [config.yaml](config.yaml) for
+See [config.yaml](https://api.jujucharms.com/charmstore/v5/~containers/docker/archive/config.yaml) for
 list of configuration options.
 
 ## Docker Compose
