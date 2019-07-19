@@ -71,7 +71,3 @@ ecosystem.
   - Check the charm-docker
   [issue-tracker](https://github.com/juju-solutions/charm-docker/issues) for
   bugs or problems related to the Charm.
-
-# Testing
-
-When upgrading this charm, the [`docker_runtime_version`](https://github.com/VariableDeclared/jenkins/blob/3bf2cabc7185568e6a80a137a7f083c428048683/jobs/validate-juju-https-envs.yaml#L22) of the `validate-https-proxy-envs` key needs to be updated with the new containerd version.
