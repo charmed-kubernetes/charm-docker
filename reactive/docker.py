@@ -26,10 +26,12 @@ from charmhelpers.fetch import filter_installed_packages
 from charmhelpers.contrib.charmsupport import nrpe
 
 
+
 from charms.reactive import hook
 from charms.reactive import remove_state
 from charms.reactive import set_state
 from charms.reactive import is_state
+from charms.reactive.flags import is_flag_set
 from charms.reactive import when
 from charms.reactive import when_any
 from charms.reactive import when_not
@@ -40,7 +42,10 @@ from charms.docker import Docker
 from charms.docker import DockerOpts
 
 from charms import layer
-from charms.layer.container_runtime_common import manage_registry_certs
+from charms.layer.container_runtime_common import (
+    manage_registry_certs,
+    check_for_juju_https_proxy
+)
 
 
 DB = unitdata.kv()
@@ -180,7 +185,9 @@ def install():
         hookenv.log('Unknown runtime {}'.format(runtime))
         return False
 
-    validate_config()
+    charm_config = check_for_juju_https_proxy(config)
+    validate_config(charm_config)
+
     opts = DockerOpts()
     render(
         'docker.defaults',
@@ -193,7 +200,7 @@ def install():
     render(
         'docker.systemd',
         '/lib/systemd/system/docker.service',
-        config()
+        charm_config
     )
     reload_system_daemons()
 
@@ -899,7 +906,7 @@ def manage_docker_opts(opts, remove=False):
     set_state('docker.restart')
 
 
-def validate_config():
+def validate_config(config):
     """
     Check that config is valid.
 
@@ -908,7 +915,7 @@ def validate_config():
     max_line = 2048
     line_prefix_len = len('Environment="NO_PROXY=""')
     remain_len = max_line - line_prefix_len
-    if len(config('no_proxy')) > remain_len:
+    if len(config.get('no_proxy', '')) > remain_len:
         raise ConfigError('no_proxy longer than {} chars.'.format(remain_len))
 
 
@@ -919,7 +926,9 @@ def recycle_daemon():
 
     :return: None
     """
-    validate_config()
+    charm_config = check_for_juju_https_proxy(config)
+    validate_config(charm_config)
+
     hookenv.log('Restarting docker service.')
 
     # Re-render our docker daemon template at this time... because we're
@@ -935,7 +944,12 @@ def recycle_daemon():
             'docker_runtime': runtime
         }
     )
-    render('docker.systemd', '/lib/systemd/system/docker.service', config())
+    render(
+        'docker.systemd',
+        '/lib/systemd/system/docker.service',
+        charm_config
+    )
+
     reload_system_daemons()
     host.service_restart('docker')
 
@@ -997,4 +1011,3 @@ def _remove_docker_network_bridge():
 
     # Render the config and restart docker.
     recycle_daemon()
-

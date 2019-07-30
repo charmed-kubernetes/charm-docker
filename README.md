@@ -4,12 +4,12 @@ This subordinate charm deploys the [Docker](http://docker.com) engine within
 a running Juju charm application. Docker is an open platform for developers
 and sysadmins to build, ship, and run distributed applications in containers.
 
-Docker containers wrap a piece of software in a complete file system that 
+Docker containers wrap a piece of software in a complete file system that
 contains everything needed to run an application on a server.
 
-Docker focuses on distributing applications as containers that can be quickly 
-assembled from components that are run the same on different servers without 
-environmental dependencies. This eliminates the friction between development, 
+Docker focuses on distributing applications as containers that can be quickly
+assembled from components that are run the same on different servers without
+environmental dependencies. This eliminates the friction between development,
 QA, and production environments.
 
 # States
@@ -25,7 +25,7 @@ The following states are set by this subordinate:
 
 The Docker subordinate charm is to be used with principal
 charms that need a container runtime.  To use, we deploy
-the Docker subordinate charm and then relate it to the 
+the Docker subordinate charm and then relate it to the
 principal charm.
 
 ```
@@ -43,6 +43,8 @@ principal charm.
 See [config.yaml](https://api.jujucharms.com/charmstore/v5/~containers/docker/archive/config.yaml) for
 list of configuration options.
 
+> Note: Setting HTTP proxy values will override `juju-http-proxy` or `juju-https-proxy` on the model.
+
 ## Docker Compose
 
 This charm also installs the 'docker-compose' python package using pip. So
@@ -52,17 +54,17 @@ and logging.
 
 # Contact Information
 
-This charm is available at <https://jujucharms.com/docker> and contains the 
-open source operations code to deploy on all public clouds in the Juju 
+This charm is available at <https://jujucharms.com/docker> and contains the
+open source operations code to deploy on all public clouds in the Juju
 ecosystem.
 
 ## Docker links
 
   - The [Docker homepage](https://www.docker.com/)
-  - Docker [documentation](https://docs.docker.com/) for help with Docker 
+  - Docker [documentation](https://docs.docker.com/) for help with Docker
   commands.
   - Docker [forums](https://forums.docker.com/) for community discussions.
-  - Check the Docker [issue tracker](https://github.com/docker/docker/issues) 
+  - Check the Docker [issue tracker](https://github.com/docker/docker/issues)
   for bugs or problems with the Docker software.
   - The [charm-docker](https://github.com/juju-solutions/charm-docker) is
   the GitHub repository that contains the reactive code to build this Charm.
