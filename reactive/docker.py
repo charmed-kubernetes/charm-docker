@@ -754,7 +754,7 @@ def remove_nrpe_config():
     for service in services:
         nrpe_setup.remove_check(shortname=service)
 
-
+@when('docker.ready')
 @when('config.changed.docker-logins')
 def docker_logins_changed():
     """
