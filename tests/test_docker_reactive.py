@@ -51,13 +51,13 @@ class TestDocker(TestCase):
             mock_install.assert_called_once_with(['docker.io'], fatal=True)
 
     @staticmethod
-    def test_add_apt_key_url():
+    def test_probe_runtime_availability():
         """
         Assert correct parameters are called.
         """
         with patch('reactive.docker.check_call') as mock_cc:
-            docker.add_apt_key_url('test')
-            mock_cc.assert_called()
+            docker._probe_runtime_availability()
+            mock_cc.assert_called_once_with(['docker', 'info'])
 
     def test_validate_config(self):
         """
