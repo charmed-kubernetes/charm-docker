@@ -57,7 +57,7 @@ class TestDocker(TestCase):
         """
         with patch('reactive.docker.check_call') as mock_cc:
             docker.add_apt_key_url('test')
-            mock_cc.assert_called_once()
+            mock_cc.assert_called()
 
     def test_validate_config(self):
         """
