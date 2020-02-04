@@ -20,4 +20,18 @@ sys.modules['charms.layer.container_runtime_common'] = charms.layer.container_ru
 sys.modules['charms.reactive'] = charms.reactive
 sys.modules['charms.reactive.helpers'] = charms.reactive.helpers
 
+for decorator in ('when',
+                  'when_all',
+                  'when_any',
+                  'when_not',
+                  'when_none',
+                  'when_not_all',
+                  'not_unless',
+                  'when_file_changed',
+                  'collect_metrics',
+                  'meter_status_changed',
+                  'only_once',
+                  'hook'):
+    setattr(charms.reactive, decorator, lambda *a: lambda f: f)
+
 os.environ['JUJU_MODEL_UUID'] = 'test-1234'
