@@ -10,6 +10,7 @@ subordinate: true
 series:
   - xenial
   - bionic
+  - focal
 requires:
   docker:
     interface: container-runtime
