@@ -1,6 +1,5 @@
 import os
 import json
-import shutil
 import requests
 import subprocess
 from shlex import split
@@ -26,12 +25,10 @@ from charmhelpers.fetch import filter_installed_packages
 from charmhelpers.contrib.charmsupport import nrpe
 
 
-
 from charms.reactive import hook
 from charms.reactive import remove_state
 from charms.reactive import set_state
 from charms.reactive import is_state
-from charms.reactive.flags import is_flag_set
 from charms.reactive import when
 from charms.reactive import when_any
 from charms.reactive import when_not
@@ -41,7 +38,6 @@ from charms.reactive.helpers import data_changed
 from charms.docker import Docker
 from charms.docker import DockerOpts
 
-from charms import layer
 from charms.layer.container_runtime_common import (
     manage_registry_certs,
     check_for_juju_https_proxy
@@ -753,6 +749,7 @@ def remove_nrpe_config():
 
     for service in services:
         nrpe_setup.remove_check(shortname=service)
+
 
 @when('docker.ready')
 @when('config.changed.docker-logins')
