@@ -82,3 +82,7 @@ class TestDocker(TestCase):
         assert docker.status_set.call_count == 0
         docker.pre_series_upgrade()
         assert docker.status_set.call_count == 1
+        with patch('reactive.docker.check_call') as check_call:
+            docker.post_series_upgrade()
+        assert docker.status_set.call_count == 2
+        check_call.assert_called_once_with(['docker', 'info'])

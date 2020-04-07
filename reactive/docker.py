@@ -99,6 +99,11 @@ def pre_series_upgrade():
     status_set('blocked', 'Series upgrade in progress')
 
 
+@hook('post-series-upgrade')
+def post_series_upgrade():
+    signal_workloads_start()
+
+
 def set_custom_docker_package():
     """
     If a custom Docker package is defined, add it to
