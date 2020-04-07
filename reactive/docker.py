@@ -94,6 +94,11 @@ def upgrade():
         'Holding docker packages at current revision.')
 
 
+@hook('pre-series-upgrade')
+def pre_series_upgrade():
+    status_set('blocked', 'Series upgrade in progress')
+
+
 def set_custom_docker_package():
     """
     If a custom Docker package is defined, add it to

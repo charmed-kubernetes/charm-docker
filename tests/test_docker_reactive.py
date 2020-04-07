@@ -8,6 +8,9 @@ class TestDocker(TestCase):
     """
     Docker charm tests.
     """
+    def tearDown(self):
+        docker.status_set.reset_mock()
+
     @staticmethod
     def test_install():
         """
@@ -74,3 +77,8 @@ class TestDocker(TestCase):
             docker.validate_config,
             invalid_config
         )
+
+    def test_series_upgrade(self):
+        assert docker.status_set.call_count == 0
+        docker.pre_series_upgrade()
+        assert docker.status_set.call_count == 1
