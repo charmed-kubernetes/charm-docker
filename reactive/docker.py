@@ -11,7 +11,6 @@ from subprocess import Popen, PIPE
 from charmhelpers.core import host
 from charmhelpers.core import hookenv
 from charmhelpers.core import unitdata
-from charmhelpers.core.hookenv import status_set
 from charmhelpers.core.hookenv import config
 from charmhelpers.core.templating import render
 from charmhelpers.core.host import arch
@@ -42,6 +41,7 @@ from charms.layer.container_runtime_common import (
     manage_registry_certs,
     check_for_juju_https_proxy
 )
+from charms.layer import status
 
 
 DB = unitdata.kv()
@@ -96,7 +96,7 @@ def upgrade():
 
 @hook('pre-series-upgrade')
 def pre_series_upgrade():
-    status_set('blocked', 'Series upgrade in progress')
+    status.blocked('Series upgrade in progress')
 
 
 @hook('post-series-upgrade')
@@ -162,7 +162,7 @@ def install():
     # Switching runtimes causes a reinstall so remove any holds that exist.
     unhold_all()
 
-    status_set('maintenance', 'Installing AUFS and other tools.')
+    status.maintenance('Installing AUFS and other tools.')
     kernel_release = check_output(['uname', '-r']).rstrip()
     packages = [
         'aufs-tools',
@@ -329,7 +329,7 @@ def install_from_archive_apt():
 
     :return: None
     """
-    status_set('maintenance', 'Installing docker.io from universe.')
+    status.maintenance('Installing docker.io from universe.')
     apt_install(['docker.io'], fatal=True)
 
 
@@ -340,7 +340,7 @@ def install_from_upstream_apt():
 
     :return: None
     """
-    status_set('maintenance', 'Installing docker-ce from upstream PPA.')
+    status.maintenance('Installing docker-ce from upstream PPA.')
     key_url = 'https://download.docker.com/linux/ubuntu/gpg'
     add_apt_key_url(key_url)
 
@@ -381,7 +381,7 @@ def install_from_nvidia_apt():
 
     :return: None
     """
-    status_set('maintenance', 'Installing docker-engine from Nvidia PPA.')
+    status.maintenance('Installing docker-engine from Nvidia PPA.')
 
     # Get the server and key in the apt-key management tool.
     add_apt_key('9DC858229FC7DD38854AE2D88D81803C0EBFCD88')
@@ -444,7 +444,7 @@ def install_from_custom_apt():
 
     :return: None or False
     """
-    status_set('maintenance', 'Installing Docker from custom repository.')
+    status.maintenance('Installing Docker from custom repository.')
 
     repo_string = config('docker_runtime_repo')
     key_url = config('docker_runtime_key_url')
@@ -453,19 +453,19 @@ def install_from_custom_apt():
     if not repo_string:
         message = '`docker_runtime_repo` must be set'
         hookenv.log(message)
-        hookenv.status_set('blocked', message)
+        hookenv.status.blocked(message)
         return False
 
     if not key_url:
         message = '`docker_runtime_key_url` must be set'
         hookenv.log(message)
-        hookenv.status_set('blocked', message)
+        hookenv.status.blocked(message)
         return False
 
     if not package_name:
         message = '`docker_runtime_package` must be set'
         hookenv.log(message)
-        hookenv.status_set('blocked', message)
+        hookenv.status.blocked(message)
         return False
 
     lsb = host.lsb_release()
@@ -610,10 +610,10 @@ def signal_workloads_start():
     # it is available for workloads. Assuming response from daemon
     # to be sufficient.
     if not _probe_runtime_availability():
-        status_set('waiting', 'Container runtime not available.')
+        status.waiting('Container runtime not available.')
         return
 
-    status_set('active', 'Container runtime available.')
+    status.active('Container runtime available.')
     set_state('docker.available')
 
 
@@ -630,7 +630,7 @@ def container_sdn_setup(sdn):
     bind_ip = sdn_config['subnet']
     mtu = sdn_config['mtu']
     if data_changed('bip', bind_ip) or data_changed('mtu', mtu):
-        status_set('maintenance', 'Configuring container runtime with SDN.')
+        status.maintenance('Configuring container runtime with SDN.')
         opts = DockerOpts()
         # This is a great way to misconfigure a docker daemon. Remove the
         # existing bind ip and mtu values of the SDN
@@ -837,7 +837,7 @@ def configure_registry():
                 msg = 'Incorrect credentials for docker registry'
             else:
                 msg = 'docker login failed, see juju debug-log'
-            hookenv.status_set('blocked', msg)
+            hookenv.status.blocked(msg)
     else:
         hookenv.log('Disabling auth for docker registry: {}.'.format(netloc))
         # NB: it's safe to logout of a registry that was never logged in
@@ -961,7 +961,7 @@ def recycle_daemon():
     host.service_restart('docker')
 
     if not _probe_runtime_availability():
-        status_set('waiting', 'Container runtime not available.')
+        status.waiting('Container runtime not available.')
         return
 
 
@@ -1005,8 +1005,7 @@ def _remove_docker_network_bridge():
 
     :return: None
     """
-    status_set('maintenance',
-               'Reconfiguring container runtime network bridge.')
+    status.maintenance('Reconfiguring container runtime network bridge.')
     host.service_stop('docker')
     apt_install(['bridge-utils'], fatal=True)
 
