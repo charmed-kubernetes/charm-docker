@@ -8,6 +8,9 @@ class TestDocker(TestCase):
     """
     Docker charm tests.
     """
+    def tearDown(self):
+        docker.status.reset_mock()
+
     @staticmethod
     def test_install():
         """
@@ -74,3 +77,15 @@ class TestDocker(TestCase):
             docker.validate_config,
             invalid_config
         )
+
+    def test_series_upgrade(self):
+        assert docker.status.blocked.call_count == 0
+        assert docker.status.active.call_count == 0
+        docker.pre_series_upgrade()
+        assert docker.status.blocked.call_count == 1
+        assert docker.status.active.call_count == 0
+        with patch('reactive.docker.check_call') as check_call:
+            docker.post_series_upgrade()
+        assert docker.status.blocked.call_count == 1
+        assert docker.status.active.call_count == 1
+        check_call.assert_called_once_with(['docker', 'info'])
