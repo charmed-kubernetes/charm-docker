@@ -453,19 +453,19 @@ def install_from_custom_apt():
     if not repo_string:
         message = '`docker_runtime_repo` must be set'
         hookenv.log(message)
-        hookenv.status.blocked(message)
+        status.blocked(message)
         return False
 
     if not key_url:
         message = '`docker_runtime_key_url` must be set'
         hookenv.log(message)
-        hookenv.status.blocked(message)
+        status.blocked(message)
         return False
 
     if not package_name:
         message = '`docker_runtime_package` must be set'
         hookenv.log(message)
-        hookenv.status.blocked(message)
+        status.blocked(message)
         return False
 
     lsb = host.lsb_release()
@@ -837,7 +837,7 @@ def configure_registry():
                 msg = 'Incorrect credentials for docker registry'
             else:
                 msg = 'docker login failed, see juju debug-log'
-            hookenv.status.blocked(msg)
+            status.blocked(msg)
     else:
         hookenv.log('Disabling auth for docker registry: {}.'.format(netloc))
         # NB: it's safe to logout of a registry that was never logged in
