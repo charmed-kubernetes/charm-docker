@@ -8,9 +8,9 @@ tags:
   - containers
 subordinate: true
 series:
-  - xenial
-  - bionic
   - focal
+  - bionic
+  - xenial
 requires:
   docker:
     interface: container-runtime

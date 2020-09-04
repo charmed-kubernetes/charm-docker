@@ -3,5 +3,6 @@ includes:
   - 'layer:basic'
   - 'layer:debug'
   - 'layer:container-runtime-common'
+  - 'layer:status'
   - 'interface:container-runtime'
   - 'interface:docker-registry'
