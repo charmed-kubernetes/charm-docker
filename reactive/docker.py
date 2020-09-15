@@ -1,5 +1,6 @@
 import os
 import json
+import shutil
 import requests
 import subprocess
 from shlex import split
@@ -203,11 +204,19 @@ def install():
             'docker_runtime': runtime
         }
     )
+    if not os.path.isdir('/etc/systemd/system/docker.service.d/'):
+        host.mkdir('/etc/systemd/system/docker.service.d/')
     render(
-        'docker.systemd',
-        '/lib/systemd/system/docker.service',
-        charm_config
+        'docker-daemon.conf',
+        '/etc/systemd/system/docker.service.d/docker-daemon.conf',
+        {}
     )
+    if charm_config.get('http_proxy') or charm_config.get('https_config'):
+        render(
+            'http-proxy.conf',
+            '/etc/systemd/system/docker.service.d/http-proxy.conf',
+            charm_config
+        )
     reload_system_daemons()
 
     hold_all()
@@ -236,6 +245,8 @@ def remove():
         hookenv.log('Removing package(s): {}.'.format(package_list))
         apt_unhold(docker_packages[k])
         apt_purge(docker_packages[k])
+
+    shutil.rmtree('/etc/systemd/system/docker.service.d/', ignore_errors=True)
 
 
 @when('docker.ready')
@@ -951,11 +962,19 @@ def recycle_daemon():
             'docker_runtime': runtime
         }
     )
+    if not os.path.isdir('/etc/systemd/system/docker.service.d/'):
+        host.mkdir('/etc/systemd/system/docker.service.d/')
     render(
-        'docker.systemd',
-        '/lib/systemd/system/docker.service',
-        charm_config
+        'docker-daemon.conf',
+        '/etc/systemd/system/docker.service.d/docker-daemon.conf',
+        {}
     )
+    if charm_config.get('http_proxy') or charm_config.get('https_config'):
+        render(
+            'http-proxy.conf',
+            '/etc/systemd/system/docker.service.d/http-proxy.conf',
+            charm_config
+        )
 
     reload_system_daemons()
     host.service_restart('docker')
