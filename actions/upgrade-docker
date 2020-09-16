@@ -15,10 +15,10 @@ from charmhelpers.fetch import (
 from charmhelpers.core import host
 from charmhelpers.core.templating import render
 
-from charms.layer.docker import (
+from reactive.docker import (
     docker_packages,
     determine_apt_source,
-    render_configuration_template
+    recycle_daemon
 )
 
 
@@ -31,12 +31,14 @@ def main():
 
         runtime = determine_apt_source()
         apt_unhold(docker_packages[runtime])
-        apt_install(docker_packages[runtime], fatal=True)
+        apt_install(
+            docker_packages[runtime],
+            options=['-o Dpkg::Options::=--force-confnew'],
+            fatal=True
+        )
         apt_hold(docker_packages[runtime])
 
-        render_configuration_template(service=True)
-
-        host.service_reload('docker')
+        recycle_daemon()
 
         action_set({
             'runtime': ', '.join(docker_packages[runtime])
