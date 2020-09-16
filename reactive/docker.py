@@ -1,5 +1,6 @@
 import os
 import json
+import shutil
 import requests
 import subprocess
 from shlex import split
@@ -84,11 +85,47 @@ def unhold_all():
         apt_unhold(docker_packages[k])
 
 
+def write_drop_ins():
+    """
+    Write the Docker systemd drop-ins.
+
+    :return: None
+    """
+    opts = DockerOpts()
+    runtime = determine_apt_source()
+    charm_config = check_for_juju_https_proxy(config)
+
+    validate_config(charm_config)
+
+    render(
+        'docker.defaults',
+        '/etc/default/docker',
+        {
+            'opts': opts.to_s(),
+            'docker_runtime': runtime
+        }
+    )
+    if not os.path.isdir('/etc/systemd/system/docker.service.d/'):
+        host.mkdir('/etc/systemd/system/docker.service.d/')
+    render(
+        'docker-daemon.conf',
+        '/etc/systemd/system/docker.service.d/docker-daemon.conf',
+        {}
+    )
+    if charm_config.get('http_proxy') or charm_config.get('https_config'):
+        render(
+            'http-proxy.conf',
+            '/etc/systemd/system/docker.service.d/http-proxy.conf',
+            charm_config
+        )
+
+
 @hook('upgrade-charm')
 def upgrade():
     """
     :return: None
     """
+    write_drop_ins()
     hold_all()
     hookenv.log(
         'Holding docker packages at current revision.')
@@ -191,23 +228,7 @@ def install():
         hookenv.log('Unknown runtime {}'.format(runtime))
         return False
 
-    charm_config = check_for_juju_https_proxy(config)
-    validate_config(charm_config)
-
-    opts = DockerOpts()
-    render(
-        'docker.defaults',
-        '/etc/default/docker',
-        {
-            'opts': opts.to_s(),
-            'docker_runtime': runtime
-        }
-    )
-    render(
-        'docker.systemd',
-        '/lib/systemd/system/docker.service',
-        charm_config
-    )
+    write_drop_ins()
     reload_system_daemons()
 
     hold_all()
@@ -236,6 +257,8 @@ def remove():
         hookenv.log('Removing package(s): {}.'.format(package_list))
         apt_unhold(docker_packages[k])
         apt_purge(docker_packages[k])
+
+    shutil.rmtree('/etc/systemd/system/docker.service.d/', ignore_errors=True)
 
 
 @when('docker.ready')
@@ -933,30 +956,8 @@ def recycle_daemon():
 
     :return: None
     """
-    charm_config = check_for_juju_https_proxy(config)
-    validate_config(charm_config)
-
     hookenv.log('Restarting docker service.')
-
-    # Re-render our docker daemon template at this time... because we're
-    # restarting. And its nice to play nice with others. Isn't that nice?
-    opts = DockerOpts()
-    runtime = determine_apt_source()
-    render(
-        'docker.defaults',
-        '/etc/default/docker',
-        {
-            'opts': opts.to_s(),
-            'manual': config('docker-opts'),
-            'docker_runtime': runtime
-        }
-    )
-    render(
-        'docker.systemd',
-        '/lib/systemd/system/docker.service',
-        charm_config
-    )
-
+    write_drop_ins()
     reload_system_daemons()
     host.service_restart('docker')
 
