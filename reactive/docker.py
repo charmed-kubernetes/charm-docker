@@ -503,6 +503,8 @@ def install_from_custom_apt():
     apt_update()
     apt_install([package_name])
 
+    return True
+
 
 def install_cuda_drivers_repo(architecture, release, ubuntu):
     """
@@ -593,8 +595,15 @@ def add_apt_key_url(url):
     :param url: String
     :return: None
     """
+    proxy_config = check_for_juju_https_proxy(config)
+    proxy_env = dict(os.environ)
+    proxy_env.update({
+        'HTTP_PROXY': proxy_config.get('http_proxy'),
+        'HTTPS_PROXY': proxy_config.get('https_proxy'),
+        'NO_PROXY': proxy_config.get('no_proxy')
+    })
     curl_command = 'curl -s -L {}'.format(url).split()
-    curl = Popen(curl_command, stdout=PIPE)
+    curl = Popen(curl_command, stdout=PIPE, env=proxy_env)
     apt_command = 'apt-key add -'.split()
     check_call(apt_command, stdin=curl.stdout)
     curl.wait()
