@@ -102,6 +102,7 @@ def write_drop_ins():
         '/etc/default/docker',
         {
             'opts': opts.to_s(),
+            'extra_opts': config('docker-opts'),
             'docker_runtime': runtime
         }
     )
