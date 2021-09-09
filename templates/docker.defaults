@@ -2,4 +2,4 @@
 # DO NOT EDIT BY HAND. EDITS WILL NOT BE PRESERVED.
 # runtime = {{docker_runtime}}
 
-DOCKER_OPTS="{{ opts }}  {{ manual|trim }}"
+DOCKER_OPTS="{{ opts }} {{ extra_opts }}"

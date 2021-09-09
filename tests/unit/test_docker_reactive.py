@@ -8,6 +8,7 @@ class TestDocker(TestCase):
     """
     Docker charm tests.
     """
+
     def tearDown(self):
         docker.status.reset_mock()
 
@@ -16,14 +17,14 @@ class TestDocker(TestCase):
         """
         Assert usermod is called during install.
         """
-        with patch('reactive.docker.check_call') as mock_cc:
-            with patch('reactive.docker.open'):
-                with patch('reactive.docker.reload_system_daemons'):
-                    with patch('reactive.docker.determine_apt_source') as apt:
-                        apt.return_value = 'apt'
+        with patch("reactive.docker.check_call") as mock_cc:
+            with patch("reactive.docker.open"):
+                with patch("reactive.docker.reload_system_daemons"):
+                    with patch("reactive.docker.determine_apt_source") as apt:
+                        apt.return_value = "apt"
                         docker.install()
                         mock_cc.assert_called_once_with(
-                            ['usermod', '-aG', 'docker', 'ubuntu']
+                            ["usermod", "-aG", "docker", "ubuntu"]
                         )
 
     @staticmethod
@@ -38,10 +39,10 @@ class TestDocker(TestCase):
         """
         Assert correct parameters are called.
         """
-        with patch('reactive.docker.check_call') as mock_cc:
+        with patch("reactive.docker.check_call") as mock_cc:
             docker.fix_iptables_for_docker_1_13()
             mock_cc.assert_called_once_with(
-                ['iptables', '-w', '300', '-P', 'FORWARD', 'ACCEPT']
+                ["iptables", "-w", "300", "-P", "FORWARD", "ACCEPT"]
             )
 
     @staticmethod
@@ -49,34 +50,28 @@ class TestDocker(TestCase):
         """
         Assert correct parameters are called.
         """
-        with patch('reactive.docker.apt_install') as mock_install:
+        with patch("reactive.docker.apt_install") as mock_install:
             docker.install_from_archive_apt()
-            mock_install.assert_called_once_with(['docker.io'], fatal=True)
+            mock_install.assert_called_once_with(["docker.io"], fatal=True)
 
     @staticmethod
     def test_probe_runtime_availability():
         """
         Assert correct parameters are called.
         """
-        with patch('reactive.docker.check_call') as mock_cc:
+        with patch("reactive.docker.check_call") as mock_cc:
             docker._probe_runtime_availability()
-            mock_cc.assert_called_once_with(['docker', 'info'])
+            mock_cc.assert_called_once_with(["docker", "info"])
 
     def test_validate_config(self):
         """
         Assert validate raises bad config.
         """
-        valid_config = {'no_proxy': 'test'}
+        valid_config = {"no_proxy": "test"}
         docker.validate_config(valid_config)
 
-        invalid_config = {
-            'no_proxy': 'a' * 2049
-        }
-        self.assertRaises(
-            docker.ConfigError,
-            docker.validate_config,
-            invalid_config
-        )
+        invalid_config = {"no_proxy": "a" * 2049}
+        self.assertRaises(docker.ConfigError, docker.validate_config, invalid_config)
 
     def test_series_upgrade(self):
         assert docker.status.blocked.call_count == 0
@@ -84,8 +79,8 @@ class TestDocker(TestCase):
         docker.pre_series_upgrade()
         assert docker.status.blocked.call_count == 1
         assert docker.status.active.call_count == 0
-        with patch('reactive.docker.check_call') as check_call:
+        with patch("reactive.docker.check_call") as check_call:
             docker.post_series_upgrade()
         assert docker.status.blocked.call_count == 1
         assert docker.status.active.call_count == 1
-        check_call.assert_called_once_with(['docker', 'info'])
+        check_call.assert_called_once_with(["docker", "info"])
