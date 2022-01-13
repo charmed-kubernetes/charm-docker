@@ -2,6 +2,7 @@ import asyncio
 import logging
 import pytest
 import time
+import shlex
 
 
 log = logging.getLogger(__name__)
@@ -9,11 +10,18 @@ log = logging.getLogger(__name__)
 
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test):
-    bundle = ops_test.render_bundle(
-        "tests/data/bundle.yaml", docker_charm=await ops_test.build_charm(".")
-    )
+    log.info("Build Charm...")
+    charm = await ops_test.build_charm(".")
 
-    await ops_test.model.deploy(bundle)
+    log.info("Build Bundle...")
+    bundle = ops_test.render_bundle("tests/data/bundle.yaml", docker_charm=charm)
+
+    log.info("Deploy Bundle...")
+    model = ops_test.model_full_name
+    cmd = f"juju deploy -m {model} {bundle}"
+    rc, stdout, stderr = await ops_test.run(*shlex.split(cmd))
+    assert rc == 0, f"Bundle deploy failed: {(stderr or stdout).strip()}"
+
     await ops_test.model.wait_for_idle(wait_for_active=True, timeout=60 * 60)
 
 
