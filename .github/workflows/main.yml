@@ -10,9 +10,9 @@ jobs:
         python: [3.6, 3.7, 3.8, 3.9]
     steps:
     - name: Check out code
-      uses: actions/checkout@v2
+      uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
     - name: Setup Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@e9aba2c848f5ebd159c070c61ea2c4e2b122355e # v2
       with:
         python-version: ${{ matrix.python }}
     - name: Install Dependencies
@@ -31,13 +31,13 @@ jobs:
     timeout-minutes: 360
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@e9aba2c848f5ebd159c070c61ea2c4e2b122355e # v2
         with:
           python-version: 3.8
       - name: Setup operator environment
-        uses: charmed-kubernetes/actions-operator@main
+        uses: charmed-kubernetes/actions-operator@ea90ed489690bf3b1c1fcca6ac5f9edab70aecb0 # main
         with:
           provider: vsphere
           credentials-yaml: ${{ secrets.CREDENTIALS_YAML }}
